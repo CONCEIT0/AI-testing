@@ -65,6 +65,7 @@ python src/ia_pendrive.py chat
 - `/imagem CAMINHO_DA_IMAGEM` → usa imagem na próxima pergunta
 - `/limparimagem` → remove imagem ativa
 - `/sair` → encerra
+- `/pasta` → mostra a pasta atual que o programa está usando
 
 ## Estrutura
 
@@ -77,3 +78,20 @@ python src/ia_pendrive.py chat
 - Você pode levar esta pasta inteira no pendrive.
 - Em cada computador, rode o instalador (`setup_portable.sh` ou `.bat`).
 - Os modelos do Ollama ocupam bastante espaço. Se quiser mobilidade total, mantenha os modelos no próprio computador alvo ou num SSD externo com espaço.
+
+
+## Erro comum: "caminho não achado"
+
+Se aparecer "caminho não encontrado":
+
+1. Rode `/pasta` dentro do chat para ver a pasta atual.
+2. Use caminho absoluto do arquivo/pasta (ex.: `E:\meus_textos` no Windows).
+3. Para imagens, teste:
+   - `/imagem E:\fotos\img1.jpg` (Windows)
+   - `/imagem /media/usb/fotos/img1.jpg` (Linux)
+4. No comando de ingestão, também pode usar absoluto:
+```bash
+python src/ia_pendrive.py ingest /caminho/completo/para/meus_textos
+```
+
+O programa agora mostra a pasta atual (`cwd`) quando não encontra o caminho, para facilitar.

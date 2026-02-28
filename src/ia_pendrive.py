@@ -14,6 +14,7 @@ import hashlib
 import json
 import math
 from pathlib import Path
+import os
 from typing import Any, Dict, List, Optional
 
 import urllib.error
@@ -23,6 +24,10 @@ import urllib.request
 DEFAULT_DATA_DIR = Path("data")
 DEFAULT_STORE = DEFAULT_DATA_DIR / "chunks.jsonl"
 DEFAULT_CONFIG = DEFAULT_DATA_DIR / "config.json"
+
+def resolve_input_path(raw: str) -> Path:
+    expanded = os.path.expanduser(raw.strip())
+    return Path(expanded).resolve()
 
 
 def cosine_similarity(a: List[float], b: List[float]) -> float:
@@ -155,12 +160,21 @@ def ingest(paths: List[Path], store: VectorStore, client: OllamaClient, embeddin
     supported = {".txt", ".md", ".csv", ".json", ".log", ".py"}
     files: List[Path] = []
 
+    missing_paths: List[Path] = []
     for p in paths:
         if p.is_file():
             files.append(p)
         elif p.is_dir():
             for ext in supported:
                 files.extend(p.rglob(f"*{ext}"))
+        else:
+            missing_paths.append(p)
+
+    if missing_paths:
+        print("Caminho(s) não encontrado(s):")
+        for mp in missing_paths:
+            print(f" - {mp}")
+        print(f"Pasta atual: {Path.cwd()}")
 
     if not files:
         print("Nenhum arquivo encontrado para ingestão.")
@@ -201,6 +215,7 @@ def interactive_chat(
     print("Comandos:")
     print("  /imagem CAMINHO   -> define uma imagem para próxima pergunta")
     print("  /limparimagem     -> remove imagem atual")
+    print("  /pasta            -> mostra pasta atual (cwd)")
 
     image_path: Optional[Path] = None
     history: List[Dict[str, Any]] = [{"role": "system", "content": build_system_prompt()}]
@@ -214,9 +229,10 @@ def interactive_chat(
             return
         if user_input.lower().startswith("/imagem"):
             raw = user_input[len("/imagem") :].strip()
-            p = Path(raw)
+            p = resolve_input_path(raw)
             if not p.exists() or not p.is_file():
-                print("Imagem não encontrada.")
+                print(f"Imagem não encontrada: {p}")
+                print(f"Pasta atual: {Path.cwd()}")
                 continue
             image_path = p
             print(f"Imagem ativa: {p}")
@@ -224,6 +240,9 @@ def interactive_chat(
         if user_input.lower() == "/limparimagem":
             image_path = None
             print("Imagem removida.")
+            continue
+        if user_input.lower() == "/pasta":
+            print(f"Pasta atual: {Path.cwd()}")
             continue
 
         q_emb = client.embed(embedding_model, user_input)
@@ -283,7 +302,7 @@ def main() -> None:
         return
     try:
         if args.cmd == "ingest":
-            ingest([Path(p) for p in args.paths], store, client, cfg["embedding_model"])
+            ingest([resolve_input_path(p) for p in args.paths], store, client, cfg["embedding_model"])
             return
         if args.cmd == "chat":
             interactive_chat(
